@@ -36,9 +36,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -46,8 +47,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.net.SocketFactory;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -74,12 +73,15 @@ public class MainActivity extends AppCompatActivity {
     EditText writeMsg;
     List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     List<MultiServerThread> peerSocketList = new ArrayList<MultiServerThread>();
+    List<Integer> clientPeerSocketList = new ArrayList<Integer>();
     String[] deviceNameArray;
     WifiP2pDevice[] deviceArray;
     // Sockets
     Socket socket;
     ServerClass serverClass;
     ClientClass clientClass;
+
+    int selectedClientPort;
 
     Socket mySocket;
     VirtualRouterTest v;
@@ -199,6 +201,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 peers.clear();
+                listView.setAdapter(new ArrayAdapter<>(getApplicationContext(), android.R.layout.simple_list_item_1, (String[]) new String[0]));
                 manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
                     @Override
                     public void onSuccess() {
@@ -246,8 +249,15 @@ public class MainActivity extends AppCompatActivity {
         socketListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                selectedClient = peerSocketList.get(position);
-                selectedClientName.setText(selectedClient.getName());
+                if (isHost == true) {
+                    selectedClient = peerSocketList.get(position);
+                    selectedClientName.setText(selectedClient.getName());
+                } else {
+                    selectedClientPort = clientPeerSocketList.get(position);
+                    Log.v("C", "I'm Client: send message to " + selectedClientPort);
+                    String clientName = String.valueOf(selectedClientPort);
+                    selectedClientName.setText(clientName);
+                }
             }
         });
         btnSend.setOnClickListener(new View.OnClickListener() {
@@ -260,9 +270,11 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         if (msg != null && isHost && serverClass != null) {
-                            serverClass.write(msg.getBytes());
+                            GroupPacket g = new GroupPacket(msg);
+                            serverClass.write(g);
                         } else if (msg != null && !isHost && clientClass != null) {
-                            clientClass.write(msg.getBytes());
+                            GroupPacket g = new GroupPacket(msg);
+                            clientClass.write(g);
                         } else {
                             Log.w("Error", String.valueOf(serverClass));
                             Log.w("Error", String.valueOf(clientClass));
@@ -358,6 +370,25 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // Client - setpeerList
+    private void setSocketListView(int[] clientArray) {
+        Log.v("S", peerSocketList.toString() + " My port" + this.socket.getLocalPort());
+        clientPeerSocketList.clear();
+        for (int socket : clientArray
+        ) {
+            clientPeerSocketList.add(socket);
+        }
+
+        ArrayAdapter<Integer> adapter = new ArrayAdapter<>(getApplicationContext(), android.R.layout.simple_list_item_1, clientPeerSocketList);
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                socketListView.setAdapter(adapter);
+            }
+        });
+    }
+
     private void setSocketStatus(final TextView text, final String value) {
         runOnUiThread(new Runnable() {
             @Override
@@ -402,13 +433,23 @@ public class MainActivity extends AppCompatActivity {
 //            socket = new Socket();
         }
 
-        public void write(byte[] bytes) {
+        public void write(GroupPacket packet) {
             try {
-                outputStream.write(bytes);
+                Log.v("C", "Selected: " + selectedClientPort);
+                if (selectedClientPort != 0) {
+                    GroupPacket groupMultihopPacket = new GroupPacket(packet.getTextMessage(), selectedClientPort);
+                    ObjectOutputStream os = new ObjectOutputStream(outputStream);
+                    os.writeObject(groupMultihopPacket);
+                } else {
+                    ObjectOutputStream os = new ObjectOutputStream(outputStream);
+                    os.writeObject(packet);
+                }
+
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
+
 
         // connect with fixed port-> receive port number from Server ie group owner
         @Override
@@ -422,8 +463,8 @@ public class MainActivity extends AppCompatActivity {
                 inputStream = kkSocket.getInputStream();
 //                inputStream = socket.getInputStream();
 //                outputStream = socket.getOutputStream();
-                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+//                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+//                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
 //                Integer myInt = ConnectionUtils.getPort(getApplicationContext());
 //                Log.w("Socket", "created client Here " + myInt);
 
@@ -431,8 +472,8 @@ public class MainActivity extends AppCompatActivity {
 //                byte myByte = myInt.byteValue();
 //                outputStream.write(myByte);
                 setSocketStatus(socketStatus, "Socket Connected: Client");
-                int receive = inputStream.read();
-                Log.w("P", String.valueOf(receive));
+//                int receive = inputStream.read();
+//                Log.w("P", String.valueOf(receive));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -447,19 +488,36 @@ public class MainActivity extends AppCompatActivity {
 
                     while (socket != null) {
                         try {
+                            // De-Serialize Group Packet
+                            ObjectInputStream ois = new ObjectInputStream(inputStream);
+                            GroupPacket groupPacket = (GroupPacket) ois.readObject();
+                            // De-Serialize Group Packet
+
                             Log.w("Buffer", Arrays.toString(buffer));
 //                            Log.w("IStream", inputStream.toString());
-                            bytes = inputStream.read(buffer);
-                            if (bytes > 0) {
-                                int finalBytes = bytes;
-                                Log.w("V", new String(buffer, 0, finalBytes));
-                                handler.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        String tempMSG = new String(buffer, 0, finalBytes);
-                                        read_msg_box.setText(tempMSG);
-                                    }
-                                });
+                            if (groupPacket.getType() == 1) {
+                                Log.w("V", "Object message-client " + groupPacket.getTextMessage());
+                                if (groupPacket.getTextMessage() != null) {
+                                    handler.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            read_msg_box.setText(groupPacket.getTextMessage());
+                                        }
+                                    });
+                                }
+                            } else if (groupPacket.getType() == 2) {
+                                Log.w("V", "Object config packet-portArray " + groupPacket.getGroupDevicePortArray() + " Client count: " + groupPacket.getGroupDevicePortArray().length);
+                                setSocketListView(groupPacket.getGroupDevicePortArray());
+                            } else if (groupPacket.getType() == 3) {
+                                Log.w("V", "Message From another client port: " + groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage());
+                                if (groupPacket.getTextMessage() != null) {
+                                    handler.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage());
+                                        }
+                                    });
+                                }
                             }
                         } catch (Exception e) {
                             setSocketStatus(socketStatus, "Socket Disconnected: Timeout");
@@ -474,15 +532,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public class MultiServerThread extends Thread {
+        List<MultiServerThread> clientArray = new ArrayList<MultiServerThread>();
         private Socket socket = null;
         private InputStream inputStream;
         private OutputStream outputStream;
 
-        public MultiServerThread(Socket socket, int name) {
+        public MultiServerThread(Socket socket, int name, List<MultiServerThread> clientArray) {
             super(String.valueOf(name));
-//            super("MultiServerThread");
             Log.w("S", "Client ID: " + String.valueOf(socket.getLocalPort()) + " " + String.valueOf(socket.getPort()));
             this.socket = socket;
+            this.clientArray = clientArray;
+        }
+
+        public Socket getSocket() {
+            return socket;
         }
 
         public OutputStream getOutputStream() {
@@ -501,12 +564,36 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        public void write(GroupPacket packet, Socket socket) {
+            try {
+                if (socket.getOutputStream() != null) {
+                    ObjectOutputStream os = new ObjectOutputStream(socket.getOutputStream());
+                    os.writeObject(packet);
+                }
+
+            } catch (IOException e) {
+                Log.e("S", e.toString());
+            }
+        }
+
+        public void forwardToPeer(GroupPacket forwardPacket) {
+            for (MultiServerThread m : clientArray
+            ) {
+                if (m.getSocket().getPort() == forwardPacket.getPort()) {
+                    Log.v("V", "SEND THIS TO " + forwardPacket.getPort());
+                    m.write(forwardPacket, m.getSocket());
+                }
+            }
+        }
+
         public void run() {
 
             try {
                 Log.v("T", "MultithreadStarted");
                 outputStream = socket.getOutputStream();
                 inputStream = socket.getInputStream();
+
+
                 InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
                 BufferedReader in = new BufferedReader(inputStreamReader);
 
@@ -526,24 +613,34 @@ public class MainActivity extends AppCompatActivity {
                             try {
                                 Log.w("Buffer", Arrays.toString(buffer));
                                 Log.w("IStream", inputStream.toString());
-                                bytes = inputStream.read(buffer);
+//                                bytes = inputStream.read(buffer);
 
-                                if (bytes > 0) {
-                                    int finalBytes = bytes;
-                                    int test = new Integer(finalBytes);
-                                    Log.w("V", String.valueOf(test));
-                                    handler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            String tempMSG = new String(buffer, 0, finalBytes);
-                                            read_msg_box.setText(socket.getPort() + ": " + tempMSG);
-                                        }
-                                    });
+                                // De-Serialize Group Packet
+                                ObjectInputStream ois = new ObjectInputStream(inputStream);
+                                GroupPacket groupPacket = (GroupPacket) ois.readObject();
+                                // De-Serialize Group Packet
+                                Log.w("V", "Object message " + String.valueOf(groupPacket.getType()));
+
+                                if (groupPacket.getType() == 1) {
+                                    Log.w("V", "Object message-server " + groupPacket.getTextMessage());
+                                    if (groupPacket.getTextMessage() != null) {
+                                        handler.post(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                read_msg_box.setText(socket.getPort() + ": " + groupPacket.getTextMessage());
+                                            }
+                                        });
+                                    }
+                                } else if (groupPacket.getType() == 3) {
+                                    Log.w("V", "Object message-Send " + groupPacket.getTextMessage() + " To Port: " + groupPacket.getPort());
+                                    forwardToPeer(groupPacket);
                                 }
+
+
                             } catch (Exception e) {
                                 setSocketStatus(socketStatus, "Socket Disconnected: Timeout");
+                                Log.e("V", String.valueOf(e));
                                 break;
-//                                throw new RuntimeException(e);
                             }
                         }
                     }
@@ -557,20 +654,52 @@ public class MainActivity extends AppCompatActivity {
 
     public class ServerClass extends Thread {
         ServerSocket serverSocket;
-        SocketFactory socketFactory;
-        InetSocketAddress serverSocket2;
-        private InputStream inputStream;
-        private OutputStream outputStream;
+        List<MultiServerThread> clientArray = new ArrayList<MultiServerThread>();
 
         public void write(byte[] bytes) {
             try {
-//                outputStream.write(bytes);
                 if (selectedClient.getOutputStream() != null) {
                     selectedClient.getOutputStream().write(bytes);
                 }
 
             } catch (IOException e) {
                 throw new RuntimeException(e);
+            }
+        }
+
+        public void write(GroupPacket packet) {
+            try {
+                if (selectedClient.getOutputStream() != null) {
+                    ObjectOutputStream os = new ObjectOutputStream(selectedClient.getOutputStream());
+                    os.writeObject(packet);
+                }
+
+            } catch (IOException e) {
+                Log.e("S", e.toString());
+            }
+        }
+
+        private void broadcastPorts() {
+
+            for (MultiServerThread m : clientArray) {
+                try {
+                    if (m == null) {
+                        Log.e("S", "Error Config packet: ");
+                        continue;
+                    }
+                    GroupPacket g = new GroupPacket(clientArray, m.getSocket().getPort());
+                    ObjectOutputStream os = new ObjectOutputStream(m.getOutputStream());
+                    os.writeObject(g);
+                } catch (IOException e) {
+                    Log.e("S", "Error Config packet: " + m.getName());
+                    Log.e("S", e.toString());
+                    e.printStackTrace();
+                } catch (NullPointerException e) {
+                    Log.e("S", "Error Config packet: " + m);
+                    Log.e("S", e.toString());
+                    e.printStackTrace();
+                }
+
             }
         }
 
@@ -585,52 +714,17 @@ public class MainActivity extends AppCompatActivity {
                     Socket clientSocket = serverSocket.accept();
                     setSocketStatus(socketStatus, "Socket Active");
                     Log.v("S", "Client accepted..." + clientSocket.getInetAddress() + " " + clientSocket.isConnected() + " " + clientSocket.getPort());
-                    MultiServerThread multiServerThread = new MultiServerThread(clientSocket, clientSocket.getPort());
+                    MultiServerThread multiServerThread = new MultiServerThread(clientSocket, clientSocket.getPort(), this.clientArray);
                     multiServerThread.start();
+                    clientArray.add(multiServerThread);
                     setSocketListView(multiServerThread);
+                    broadcastPorts();
                     Log.v("S", "Thread Started");
-
-//                    break;
                 }
 
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-
-//            ExecutorService executorService = Executors.newSingleThreadExecutor();
-//            Handler handler = new Handler(Looper.getMainLooper());
-
-//            executorService.execute(new Runnable() {
-//                @Override
-//                public void run() {
-//                    byte[] buffer = new byte[1024];
-//                    int bytes;
-//
-//                    while (socket != null) {
-//                        try {
-//                            Log.w("Buffer", Arrays.toString(buffer));
-//                            Log.w("IStream", inputStream.toString());
-//                            bytes = inputStream.read(buffer);
-//
-//                            if (bytes > 0) {
-//                                int finalBytes = bytes;
-//                                int test = new Integer(finalBytes);
-//                                Log.w("V", String.valueOf(test));
-//                                handler.post(new Runnable() {
-//                                    @Override
-//                                    public void run() {
-//                                        String tempMSG = new String(buffer, 0, finalBytes);
-//                                        read_msg_box.setText(tempMSG);
-//                                    }
-//                                });
-//                            }
-//                        } catch (Exception e) {
-//                            throw new RuntimeException(e);
-//                        }
-//                    }
-//                }
-//            });
-
         }
     }
 }
