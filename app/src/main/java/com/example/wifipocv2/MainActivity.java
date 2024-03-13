@@ -50,7 +50,6 @@ import java.util.concurrent.Executors;
 
 
 public class MainActivity extends AppCompatActivity {
-    private final int fixedPort = 8888;
     // Register the permissions callback, which handles the user's response to the
     // system permissions dialog. Save the return value, an instance of
     // ActivityResultLauncher, as an instance variable.
@@ -68,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
     });
     ListView listView;
     ListView socketListView;
-    TextView read_msg_box, connectionStatus, socketStatus, selectedClientName;
+    TextView read_msg_box, deviceIdView, connectionStatus, socketStatus, selectedClientName;
     MultiServerThread selectedClient;
     EditText writeMsg;
     List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
@@ -80,9 +79,7 @@ public class MainActivity extends AppCompatActivity {
     Socket socket;
     ServerClass serverClass;
     ClientClass clientClass;
-
     int selectedClientPort;
-
     Socket mySocket;
     VirtualRouterTest v;
     boolean isHost;
@@ -159,6 +156,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
+    private int deviceId = (int) (Math.random() * (1000 - 0 + 1) + 0);
+
     private Button btnConnect;
     private Button btnOnOff;
     private Button btnWifiDiOnOff;
@@ -297,6 +296,7 @@ public class MainActivity extends AppCompatActivity {
         listView = findViewById(R.id.peerListView);
         socketListView = findViewById(R.id.peerSocketListView);
         read_msg_box = findViewById(R.id.readMsg);
+        deviceIdView = findViewById(R.id.deviceId);
         connectionStatus = findViewById(R.id.connectionStatus);
         socketStatus = findViewById(R.id.socketStatus);
         selectedClientName = findViewById(R.id.selectedDevice);
@@ -334,6 +334,8 @@ public class MainActivity extends AppCompatActivity {
             requestPermissionLauncher.launch(
                     android.Manifest.permission.NEARBY_WIFI_DEVICES);
         }
+
+        deviceIdView.setText("Device MAC address: " + deviceId);
 
     }
 
@@ -437,7 +439,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Log.v("C", "Selected: " + selectedClientPort);
                 if (selectedClientPort != 0) {
-                    GroupPacket groupMultihopPacket = new GroupPacket(packet.getTextMessage(), selectedClientPort);
+                    GroupPacket groupMultihopPacket = new GroupPacket(packet.getTextMessage(), selectedClientPort, socket.getLocalPort());
                     ObjectOutputStream os = new ObjectOutputStream(outputStream);
                     os.writeObject(groupMultihopPacket);
                 } else {

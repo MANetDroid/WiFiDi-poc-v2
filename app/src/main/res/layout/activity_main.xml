@@ -11,8 +11,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
-        android:layout_marginStart="29dp"
-        android:layout_marginTop="75dp"
+        android:layout_marginStart="34dp"
+        android:layout_marginTop="107dp"
         android:text="Wifi On" />
 
     <Button
@@ -22,6 +22,7 @@
         android:layout_alignBaseline="@+id/onOff"
         android:layout_alignBottom="@+id/onOff"
         android:layout_centerHorizontal="true"
+        android:layout_marginBottom="-14dp"
         android:text="discover" />
 
     <Button
@@ -88,12 +89,27 @@
         android:text="Send" />
 
     <TextView
+        android:id="@+id/deviceId"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginStart="2dp"
+        android:layout_marginTop="4dp"
+        android:text="Device Id"
+        android:textAlignment="center"
+        android:textColor="@android:color/holo_blue_dark"
+        android:textSize="18sp"
+        android:textStyle="italic" />
+
+    <TextView
         android:id="@+id/connectionStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
-        android:layout_marginTop="15dp"
+        android:layout_marginStart="1dp"
+        android:layout_marginTop="36dp"
         android:text="Connection Status"
         android:textAlignment="center"
         android:textColor="@android:color/holo_blue_dark"
@@ -107,7 +123,7 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:layout_marginStart="-1dp"
-        android:layout_marginTop="47dp"
+        android:layout_marginTop="69dp"
         android:text="Socket Status"
         android:textAlignment="center"
         android:textColor="@android:color/holo_blue_dark"
@@ -121,7 +137,7 @@
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
         android:layout_marginStart="-1dp"
-        android:layout_marginTop="585dp"
+        android:layout_marginTop="617dp"
         android:text="Socket Status"
         android:textAlignment="center"
         android:textColor="@android:color/holo_blue_dark"
