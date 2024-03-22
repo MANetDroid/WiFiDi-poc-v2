@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
     });
     ListView listView;
     ListView socketListView;
-    TextView read_msg_box, deviceIdView, connectionStatus, socketStatus, selectedClientName;
+    TextView read_msg_box, deviceIdView, connectionStatus, socketStatus, selectedClientName, legacyText;
     MultiServerThread selectedClient;
     EditText writeMsg;
     List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
@@ -163,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnWifiDiOnOff;
     private Button btnDiscover;
     private Button btnSend;
+    private Button btnLegacyWifi;
     private IntentFilter intentFilter;
     private WifiManager wifiManager;
     private WifiP2pManager manager;
@@ -284,12 +285,32 @@ public class MainActivity extends AppCompatActivity {
                 writeMsg.setText("");
             }
         });
+        btnLegacyWifi.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // This is a blocking method there concurrency is used
+                ExecutorService executorService = Executors.newSingleThreadExecutor();
+                executorService.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        manager.requestGroupInfo(channel, new WifiP2pManager.GroupInfoListener() {
+                            @Override
+                            public void onGroupInfoAvailable(WifiP2pGroup group) {
+                                String groupPassword = group.getPassphrase();
+                                legacyText.setText(groupPassword);
+                            }
+                        });
+                    }
+                });
+            }
+        });
     }
 
     private void initialWork() {
         Log.w("Initialize", "Initialize App");
         // Init UI
         btnOnOff = findViewById(R.id.onOff);
+        btnLegacyWifi = findViewById(R.id.wifi_legacy);
         btnWifiDiOnOff = findViewById(R.id.wifi_di);
         btnDiscover = findViewById(R.id.discover);
         btnSend = findViewById(R.id.sendButton);
