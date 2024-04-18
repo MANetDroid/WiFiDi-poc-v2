@@ -44,10 +44,10 @@ public class GroupPacket implements Serializable {
         this.GroupDevicePortArray = portArray;
     }
 
-    public GroupPacket(String textMessage, int groupPort) {
+    public GroupPacket(String textMessage, int groupPort, int originPort) {
         this.type = 3;
         this.port = groupPort;
-        this.originPort = 6969;
+        this.originPort = originPort;
         this.textMessage = textMessage;
     }
 
