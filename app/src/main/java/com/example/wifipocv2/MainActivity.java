@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
     ClientClass clientClass;
     int selectedClientPort;
     Socket mySocket;
-    VirtualRouterTest v;
+//    VirtualRouterTest v;
     boolean isHost;
     WifiP2pManager.PeerListListener peerListListener = new WifiP2pManager.PeerListListener() {
         @Override
