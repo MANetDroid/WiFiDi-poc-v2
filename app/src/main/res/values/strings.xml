@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">WiFiPocV2</string>
+    <string name="of_messages"># of messages</string>
 </resources>

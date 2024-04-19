@@ -163,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnWifiDiOnOff;
     private Button btnDiscover;
     private Button btnSend;
-    private Button btnLegacyWifi;
+//    private Button btnLegacyWifi;
     private IntentFilter intentFilter;
     private WifiManager wifiManager;
     private WifiP2pManager manager;
@@ -285,32 +285,32 @@ public class MainActivity extends AppCompatActivity {
                 writeMsg.setText("");
             }
         });
-        btnLegacyWifi.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // This is a blocking method there concurrency is used
-                ExecutorService executorService = Executors.newSingleThreadExecutor();
-                executorService.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        manager.requestGroupInfo(channel, new WifiP2pManager.GroupInfoListener() {
-                            @Override
-                            public void onGroupInfoAvailable(WifiP2pGroup group) {
-                                String groupPassword = group.getPassphrase();
-                                legacyText.setText(groupPassword);
-                            }
-                        });
-                    }
-                });
-            }
-        });
+//        btnLegacyWifi.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                // This is a blocking method there concurrency is used
+//                ExecutorService executorService = Executors.newSingleThreadExecutor();
+//                executorService.execute(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        manager.requestGroupInfo(channel, new WifiP2pManager.GroupInfoListener() {
+//                            @Override
+//                            public void onGroupInfoAvailable(WifiP2pGroup group) {
+//                                String groupPassword = group.getPassphrase();
+//                                legacyText.setText(groupPassword);
+//                            }
+//                        });
+//                    }
+//                });
+//            }
+//        });
     }
 
     private void initialWork() {
         Log.w("Initialize", "Initialize App");
         // Init UI
         btnOnOff = findViewById(R.id.onOff);
-        btnLegacyWifi = findViewById(R.id.wifi_legacy);
+//        btnLegacyWifi = findViewById(R.id.wifi_legacy);
         btnWifiDiOnOff = findViewById(R.id.wifi_di);
         btnDiscover = findViewById(R.id.discover);
         btnSend = findViewById(R.id.sendButton);
@@ -473,6 +473,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        public void writePing (GroupPacket packet) {
+            try {
+                GroupPacket pingPacket = new GroupPacket(packet.getTextMessage(), packet.getOriginPort(),socket.getLocalPort()) ;
+                pingPacket.setType(4);
+                ObjectOutputStream os = new ObjectOutputStream(outputStream);
+                os.writeObject(pingPacket);
+            }catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
 
         // connect with fixed port-> receive port number from Server ie group owner
         @Override
@@ -533,13 +544,33 @@ public class MainActivity extends AppCompatActivity {
                                 setSocketListView(groupPacket.getGroupDevicePortArray());
                             } else if (groupPacket.getType() == 3) {
                                 Log.w("V", "Message From another client port: " + groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage());
-                                if (groupPacket.getTextMessage() != null) {
-                                    handler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage());
-                                        }
-                                    });
+                                if (groupPacket.getType() != 4 ) {
+                                    if (groupPacket.getTextMessage() != null) {
+                                        handler.post(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage());
+                                            }
+                                        });
+                                        //need to send the ping packet
+                                        ExecutorService executorService = Executors.newSingleThreadExecutor();
+//                                        String msg = writeMsg.getText().toString();
+                                        executorService.execute(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                if (groupPacket.getTextMessage() != null && clientClass!= null) {
+//                                                    GroupPacket g = new GroupPacket(msg);
+                                                    clientClass.writePing(groupPacket);
+                                                }else {
+                                                    Log.w("Error", String.valueOf(serverClass));
+                                                    Log.w("Error", String.valueOf(clientClass));
+                                                }
+                                            }
+                                        });
+                                    }
+                                } else {
+                                    //TODO process ping
+                                    Log.i("Ping-IN", "Ping packet recieved") ;
                                 }
                             }
                         } catch (Exception e) {
@@ -608,6 +639,15 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+        public void pingPacket(GroupPacket pingPacket) {
+            for (MultiServerThread m : clientArray){
+                if (m.getSocket().getPort() == pingPacket.getOriginPort()) {//TODO: proper decapsulation
+                    Log.v("V", "PING BACK TO " + pingPacket.getOriginPort());
+                    pingPacket.setType(4);
+                    m.write(pingPacket, m.getSocket());
+                }
+            }
+        }
 
         public void run() {
 
@@ -653,8 +693,10 @@ public class MainActivity extends AppCompatActivity {
                                                 read_msg_box.setText(socket.getPort() + ": " + groupPacket.getTextMessage());
                                             }
                                         });
+                                        Log.i("PING","Pinging message "+groupPacket.getTextMessage()) ;
+                                        pingPacket(groupPacket);
                                     }
-                                } else if (groupPacket.getType() == 3) {
+                                } else if (groupPacket.getType() == 3 || groupPacket.getType() ==4) {
                                     Log.w("V", "Object message-Send " + groupPacket.getTextMessage() + " To Port: " + groupPacket.getPort());
                                     forwardToPeer(groupPacket);
                                 }

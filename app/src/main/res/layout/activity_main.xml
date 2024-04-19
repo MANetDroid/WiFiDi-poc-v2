@@ -73,10 +73,13 @@
 
     <EditText
         android:id="@+id/writeMsg"
-        android:layout_width="wrap_content"
+        android:layout_width="259dp"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentBottom="true"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="6dp"
+        android:layout_marginBottom="4dp"
         android:layout_toStartOf="@+id/sendButton"
         android:ems="10"
         android:inputType="textPersonName" />
@@ -87,6 +90,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentEnd="true"
         android:layout_alignParentBottom="true"
+        android:layout_marginEnd="72dp"
+        android:layout_marginBottom="3dp"
         android:text="Send" />
 
     <TextView
@@ -145,20 +150,6 @@
         android:textSize="18sp"
         android:textStyle="italic" />
 
-    <Button
-        android:id="@+id/wifi_legacy"
-        android:layout_width="116dp"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginStart="34dp"
-        android:layout_marginTop="191dp"
-        android:layout_marginEnd="260dp"
-        android:layout_marginBottom="485dp"
-        android:text="Legacy" />
-
     <TextView
         android:id="@+id/legacy_text"
         android:layout_width="wrap_content"
@@ -170,5 +161,19 @@
         android:layout_marginEnd="87dp"
         android:layout_marginBottom="502dp"
         android:text="Test" />
+
+    <EditText
+        android:id="@+id/sendNumber"
+        android:layout_width="259dp"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="3dp"
+        android:layout_marginEnd="6dp"
+        android:layout_marginBottom="91dp"
+        android:layout_toStartOf="@+id/sendButton"
+        android:ems="10"
+        android:inputType="number"
+        android:hint="@string/of_messages"/>
 
 </RelativeLayout>

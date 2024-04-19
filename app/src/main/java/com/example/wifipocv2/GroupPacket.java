@@ -11,7 +11,7 @@ public class GroupPacket implements Serializable {
 
     private byte[] message;
     private String textMessage;
-    private int type; // 0 - config, 1 - String message Host-Peer, 2 - Group device ports, 3 - String message Peer - Peer
+    private int type; // 0 - config, 1 - String message Host-Peer, 2 - Group device ports, 3 - String message Peer - Peer 4 - ping packet
     private int[] GroupDevicePortArray;
 
     public GroupPacket(String ip, String mac) {
@@ -90,4 +90,6 @@ public class GroupPacket implements Serializable {
     public String getTextMessage() {
         return textMessage;
     }
+
+    public void setType(int type) {this.type = type;}
 }
