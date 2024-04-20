@@ -81,7 +81,7 @@ public class MainActivity extends AppCompatActivity {
     ClientClass clientClass;
     int selectedClientPort;
     Socket mySocket;
-//    VirtualRouterTest v;
+    //    VirtualRouterTest v;
     boolean isHost;
     WifiP2pManager.PeerListListener peerListListener = new WifiP2pManager.PeerListListener() {
         @Override
@@ -163,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnWifiDiOnOff;
     private Button btnDiscover;
     private Button btnSend;
-//    private Button btnLegacyWifi;
+    //    private Button btnLegacyWifi;
     private IntentFilter intentFilter;
     private WifiManager wifiManager;
     private WifiP2pManager manager;
@@ -473,13 +473,14 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        public void writePing (GroupPacket packet) {
+        public void writePing(GroupPacket packet) {
             try {
-                GroupPacket pingPacket = new GroupPacket(packet.getTextMessage(), packet.getOriginPort(),socket.getLocalPort()) ;
-                pingPacket.setType(4);
+                GroupPacket pingPacket = new GroupPacket(packet.getTextMessage(), packet.getOriginPort(), socket.getLocalPort());
+                pingPacket.setType(3);
+                pingPacket.setPing(true);
                 ObjectOutputStream os = new ObjectOutputStream(outputStream);
                 os.writeObject(pingPacket);
-            }catch (IOException e) {
+            } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
@@ -544,33 +545,36 @@ public class MainActivity extends AppCompatActivity {
                                 setSocketListView(groupPacket.getGroupDevicePortArray());
                             } else if (groupPacket.getType() == 3) {
                                 Log.w("V", "Message From another client port: " + groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage());
-                                if (groupPacket.getType() != 4 ) {
-                                    if (groupPacket.getTextMessage() != null) {
-                                        handler.post(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage());
-                                            }
-                                        });
+
+                                if (groupPacket.getTextMessage() != null) {
+                                    handler.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage());
+                                        }
+                                    });
+
+                                    if (!groupPacket.isPing()) {
                                         //need to send the ping packet
                                         ExecutorService executorService = Executors.newSingleThreadExecutor();
 //                                        String msg = writeMsg.getText().toString();
                                         executorService.execute(new Runnable() {
                                             @Override
                                             public void run() {
-                                                if (groupPacket.getTextMessage() != null && clientClass!= null) {
+                                                if (groupPacket.getTextMessage() != null && clientClass != null) {
 //                                                    GroupPacket g = new GroupPacket(msg);
                                                     clientClass.writePing(groupPacket);
-                                                }else {
+                                                } else {
                                                     Log.w("Error", String.valueOf(serverClass));
                                                     Log.w("Error", String.valueOf(clientClass));
                                                 }
                                             }
                                         });
+                                    }else {
+                                        Log.i("PING-IN", "Ping incoming reicieved") ;
+                                        //TODO collect data
+
                                     }
-                                } else {
-                                    //TODO process ping
-                                    Log.i("Ping-IN", "Ping packet recieved") ;
                                 }
                             }
                         } catch (Exception e) {
@@ -639,11 +643,13 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+
         public void pingPacket(GroupPacket pingPacket) {
-            for (MultiServerThread m : clientArray){
+            for (MultiServerThread m : clientArray) {
                 if (m.getSocket().getPort() == pingPacket.getOriginPort()) {//TODO: proper decapsulation
                     Log.v("V", "PING BACK TO " + pingPacket.getOriginPort());
-                    pingPacket.setType(4);
+                    pingPacket.setType(1);
+                    pingPacket.setPing(true);
                     m.write(pingPacket, m.getSocket());
                 }
             }
@@ -693,10 +699,10 @@ public class MainActivity extends AppCompatActivity {
                                                 read_msg_box.setText(socket.getPort() + ": " + groupPacket.getTextMessage());
                                             }
                                         });
-                                        Log.i("PING","Pinging message "+groupPacket.getTextMessage()) ;
+                                        Log.i("PING", "Pinging message " + groupPacket.getTextMessage());
                                         pingPacket(groupPacket);
                                     }
-                                } else if (groupPacket.getType() == 3 || groupPacket.getType() ==4) {
+                                } else if (groupPacket.getType() == 3) {
                                     Log.w("V", "Object message-Send " + groupPacket.getTextMessage() + " To Port: " + groupPacket.getPort());
                                     forwardToPeer(groupPacket);
                                 }

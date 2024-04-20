@@ -1,9 +1,11 @@
 package com.example.wifipocv2;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
 
 public class GroupPacket implements Serializable {
+    private boolean isPing ;
     private String ip;
     private String mac;
     private int port;
@@ -14,6 +16,15 @@ public class GroupPacket implements Serializable {
     private int type; // 0 - config, 1 - String message Host-Peer, 2 - Group device ports, 3 - String message Peer - Peer 4 - ping packet
     private int[] GroupDevicePortArray;
 
+    public Date getSentTime() {
+        return sentTime;
+    }
+
+    public void setSentTime(Date sentTime) {
+        this.sentTime = sentTime;
+    }
+
+    private Date sentTime ;
     public GroupPacket(String ip, String mac) {
         this.type = 0;
         this.ip = ip;
@@ -92,4 +103,12 @@ public class GroupPacket implements Serializable {
     }
 
     public void setType(int type) {this.type = type;}
+
+    public boolean isPing() {
+        return isPing;
+    }
+
+    public void setPing(boolean ping) {
+        isPing = ping;
+    }
 }
