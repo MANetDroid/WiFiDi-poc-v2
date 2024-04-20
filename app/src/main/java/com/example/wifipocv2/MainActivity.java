@@ -14,6 +14,7 @@ import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
@@ -33,12 +34,16 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -572,6 +577,33 @@ public class MainActivity extends AppCompatActivity {
                                         });
                                     }else {
                                         Log.i("PING-IN", "Ping incoming reicieved") ;
+                                        long timeLapse = System.currentTimeMillis() - groupPacket.getSentTime().getTime() ;
+                                        int type = groupPacket.getType();
+                                        String fileName = null;
+                                        switch (type) {
+                                            case 1:
+                                                fileName = "client-server.csv" ;
+                                                break;
+                                            case 3:
+                                                fileName = "client-client.csv" ;
+                                                break;
+                                            default:
+                                                Log.e("record", "Unidentified type of packet") ;
+                                        }
+                                        String writeString = timeLapse + "\n" ;
+                                        if (fileName != null) {
+                                            try {
+                                                File file = new File(getFilesDir(), fileName);
+                                                FileOutputStream fos = new FileOutputStream(file,true);
+                                                OutputStreamWriter osw = new OutputStreamWriter(fos);
+                                                osw.write(writeString);
+                                                osw.flush();
+                                                osw.close();
+                                                fos.close();
+                                            } catch (FileNotFoundException e) {
+                                                throw new RuntimeException(e);
+                                            }
+                                        }
                                         //TODO collect data
 
                                     }
