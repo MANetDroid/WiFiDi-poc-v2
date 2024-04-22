@@ -49,6 +49,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -276,9 +277,11 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         if (msg != null && isHost && serverClass != null) {
                             GroupPacket g = new GroupPacket(msg);
+                            g.setSentTime(new Date());
                             serverClass.write(g);
                         } else if (msg != null && !isHost && clientClass != null) {
                             GroupPacket g = new GroupPacket(msg);
+                            g.setSentTime(new Date());
                             clientClass.write(g);
                         } else {
                             Log.w("Error", String.valueOf(serverClass));
@@ -465,7 +468,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Log.v("C", "Selected: " + selectedClientPort);
                 if (selectedClientPort != 0) {
-                    GroupPacket groupMultihopPacket = new GroupPacket(packet.getTextMessage(), selectedClientPort, socket.getLocalPort());
+                    GroupPacket groupMultihopPacket = new GroupPacket(packet.getTextMessage(), selectedClientPort, socket.getLocalPort(), packet.getSentTime());
                     ObjectOutputStream os = new ObjectOutputStream(outputStream);
                     os.writeObject(groupMultihopPacket);
                 } else {
@@ -480,7 +483,7 @@ public class MainActivity extends AppCompatActivity {
 
         public void writePing(GroupPacket packet) {
             try {
-                GroupPacket pingPacket = new GroupPacket(packet.getTextMessage(), packet.getOriginPort(), socket.getLocalPort());
+                GroupPacket pingPacket = new GroupPacket(packet.getTextMessage(), packet.getOriginPort(), socket.getLocalPort(), packet.getSentTime());
                 pingPacket.setType(3);
                 pingPacket.setPing(true);
                 ObjectOutputStream os = new ObjectOutputStream(outputStream);
@@ -541,7 +544,8 @@ public class MainActivity extends AppCompatActivity {
                                     handler.post(new Runnable() {
                                         @Override
                                         public void run() {
-                                            read_msg_box.setText(groupPacket.getTextMessage());
+                                            long dt = new Date().getTime() - groupPacket.getSentTime().getTime();
+                                            read_msg_box.setText(groupPacket.getTextMessage() + dt);
                                         }
                                     });
                                 }
@@ -555,59 +559,65 @@ public class MainActivity extends AppCompatActivity {
                                     handler.post(new Runnable() {
                                         @Override
                                         public void run() {
-                                            read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage());
+                                            long dt = new Date().getTime() - groupPacket.getSentTime().getTime();
+                                            read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage() + dt);
                                         }
                                     });
 
-                                    if (!groupPacket.isPing()) {
-                                        //need to send the ping packet
-                                        ExecutorService executorService = Executors.newSingleThreadExecutor();
-//                                        String msg = writeMsg.getText().toString();
-                                        executorService.execute(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                if (groupPacket.getTextMessage() != null && clientClass != null) {
-//                                                    GroupPacket g = new GroupPacket(msg);
-                                                    clientClass.writePing(groupPacket);
-                                                } else {
-                                                    Log.w("Error", String.valueOf(serverClass));
-                                                    Log.w("Error", String.valueOf(clientClass));
-                                                }
-                                            }
-                                        });
-                                    }else {
-                                        Log.i("PING-IN", "Ping incoming reicieved") ;
-                                        long timeLapse = System.currentTimeMillis() - groupPacket.getSentTime().getTime() ;
-                                        int type = groupPacket.getType();
-                                        String fileName = null;
-                                        switch (type) {
-                                            case 1:
-                                                fileName = "client-server.csv" ;
-                                                break;
-                                            case 3:
-                                                fileName = "client-client.csv" ;
-                                                break;
-                                            default:
-                                                Log.e("record", "Unidentified type of packet") ;
-                                        }
-                                        String writeString = timeLapse + "\n" ;
-                                        if (fileName != null) {
-                                            try {
-                                                File file = new File(getFilesDir(), fileName);
-                                                FileOutputStream fos = new FileOutputStream(file,true);
-                                                OutputStreamWriter osw = new OutputStreamWriter(fos);
-                                                osw.write(writeString);
-                                                osw.flush();
-                                                osw.close();
-                                                fos.close();
-                                            } catch (FileNotFoundException e) {
-                                                throw new RuntimeException(e);
-                                            }
-                                        }
-                                        //TODO collect data
 
+                                }
+                            }
+
+                            if (!groupPacket.isPing()) {
+                                //need to send the ping packet
+                                ExecutorService executorService = Executors.newSingleThreadExecutor();
+//                                        String msg = writeMsg.getText().toString();
+                                executorService.execute(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        if (groupPacket.getTextMessage() != null && clientClass != null) {
+//                                                    GroupPacket g = new GroupPacket(msg);
+                                            clientClass.writePing(groupPacket);
+                                        } else if (groupPacket.getTextMessage() != null && serverClass != null) {
+//                                            serverClass.wr
+                                        } else {
+                                            Log.w("Error", String.valueOf(serverClass));
+                                            Log.w("Error", String.valueOf(clientClass));
+                                        }
+                                    }
+                                });
+                            } else {
+                                Log.i("PING-IN", "Ping incoming reicieved");
+                                long timeLapse = new Date().getTime() - groupPacket.getSentTime().getTime();
+                                int type = groupPacket.getType();
+                                String fileName = null;
+                                switch (type) {
+                                    case 1:
+                                        fileName = "client-server.csv";
+                                        break;
+                                    case 3:
+                                        fileName = "client-client.csv";
+                                        break;
+                                    default:
+                                        Log.e("record", "Unidentified type of packet");
+                                }
+                                String writeString = timeLapse + "\n";
+                                if (fileName != null) {
+                                    try {
+                                        File file = new File(getFilesDir(), fileName);
+                                        FileOutputStream fos = new FileOutputStream(file, true);
+                                        OutputStreamWriter osw = new OutputStreamWriter(fos);
+                                        osw.write(writeString);
+                                        Log.i("Result", writeString);
+                                        osw.flush();
+                                        osw.close();
+                                        fos.close();
+                                    } catch (FileNotFoundException e) {
+                                        throw new RuntimeException(e);
                                     }
                                 }
+                                //TODO collect data
+
                             }
                         } catch (Exception e) {
                             setSocketStatus(socketStatus, "Socket Disconnected: Timeout");
@@ -728,7 +738,8 @@ public class MainActivity extends AppCompatActivity {
                                         handler.post(new Runnable() {
                                             @Override
                                             public void run() {
-                                                read_msg_box.setText(socket.getPort() + ": " + groupPacket.getTextMessage());
+                                                long dt = new Date().getTime() - groupPacket.getSentTime().getTime();
+                                                read_msg_box.setText(socket.getPort() + ": " + dt);
                                             }
                                         });
                                         Log.i("PING", "Pinging message " + groupPacket.getTextMessage());

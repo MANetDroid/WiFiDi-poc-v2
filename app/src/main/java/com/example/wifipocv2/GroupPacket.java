@@ -5,7 +5,7 @@ import java.util.Date;
 import java.util.List;
 
 public class GroupPacket implements Serializable {
-    private boolean isPing ;
+    private boolean isPing;
     private String ip;
     private String mac;
     private int port;
@@ -15,16 +15,8 @@ public class GroupPacket implements Serializable {
     private String textMessage;
     private int type; // 0 - config, 1 - String message Host-Peer, 2 - Group device ports, 3 - String message Peer - Peer 4 - ping packet
     private int[] GroupDevicePortArray;
+    private Date sentTime;
 
-    public Date getSentTime() {
-        return sentTime;
-    }
-
-    public void setSentTime(Date sentTime) {
-        this.sentTime = sentTime;
-    }
-
-    private Date sentTime ;
     public GroupPacket(String ip, String mac) {
         this.type = 0;
         this.ip = ip;
@@ -55,11 +47,20 @@ public class GroupPacket implements Serializable {
         this.GroupDevicePortArray = portArray;
     }
 
-    public GroupPacket(String textMessage, int groupPort, int originPort) {
+    public GroupPacket(String textMessage, int groupPort, int originPort, Date sentTime) {
         this.type = 3;
         this.port = groupPort;
         this.originPort = originPort;
         this.textMessage = textMessage;
+        this.sentTime = sentTime;
+    }
+
+    public Date getSentTime() {
+        return sentTime;
+    }
+
+    public void setSentTime(Date sentTime) {
+        this.sentTime = sentTime;
     }
 
     public int getOriginPort() {
@@ -82,6 +83,10 @@ public class GroupPacket implements Serializable {
         return type;
     }
 
+    public void setType(int type) {
+        this.type = type;
+    }
+
     public String getIp() {
         return ip;
     }
@@ -101,8 +106,6 @@ public class GroupPacket implements Serializable {
     public String getTextMessage() {
         return textMessage;
     }
-
-    public void setType(int type) {this.type = type;}
 
     public boolean isPing() {
         return isPing;
