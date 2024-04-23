@@ -601,10 +601,11 @@ public class MainActivity extends AppCompatActivity {
                                         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
                                             documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
                                         }else{
-                                            documentsDir = new File(getFilesDir(), fileName);
+                                            documentsDir = getFilesDir();
                                         }
-                                        Log.i("filename", documentsDir.toString()) ;
-                                        FileOutputStream fos = new FileOutputStream(documentsDir, true);
+                                        File filePath = new File(documentsDir, fileName) ;
+                                        Log.i("filename", filePath.toString()) ;
+                                        FileOutputStream fos = new FileOutputStream(filePath, true);
                                         OutputStreamWriter osw = new OutputStreamWriter(fos);
                                         osw.write(writeString);
                                         Log.i("Result", writeString);
