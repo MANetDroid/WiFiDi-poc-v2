@@ -163,6 +163,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
     private int deviceId = (int) (Math.random() * (1000 - 0 + 1) + 0);
+    private boolean isPingMode = true;
 
     private Button btnConnect;
     private Button btnOnOff;
@@ -276,13 +277,9 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         if (msg != null && isHost && serverClass != null) {
-                            GroupPacket g = new GroupPacket(msg);
-                            g.setSentTime(new Date());
-                            serverClass.write(g);
+                            serverClass.write(sendPacket(msg));
                         } else if (msg != null && !isHost && clientClass != null) {
-                            GroupPacket g = new GroupPacket(msg);
-                            g.setSentTime(new Date());
-                            clientClass.write(g);
+                            clientClass.write(sendPacket(msg));
                         } else {
                             Log.w("Error", String.valueOf(serverClass));
                             Log.w("Error", String.valueOf(clientClass));
@@ -293,25 +290,18 @@ public class MainActivity extends AppCompatActivity {
                 writeMsg.setText("");
             }
         });
-//        btnLegacyWifi.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                // This is a blocking method there concurrency is used
-//                ExecutorService executorService = Executors.newSingleThreadExecutor();
-//                executorService.execute(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        manager.requestGroupInfo(channel, new WifiP2pManager.GroupInfoListener() {
-//                            @Override
-//                            public void onGroupInfoAvailable(WifiP2pGroup group) {
-//                                String groupPassword = group.getPassphrase();
-//                                legacyText.setText(groupPassword);
-//                            }
-//                        });
-//                    }
-//                });
-//            }
-//        });
+    }
+
+    private GroupPacket sendPacket(String msg) {
+        if (isPingMode) {
+            GroupPacket g = new GroupPacket(msg);
+            g.setPing(true);
+            g.setSentTime(new Date());
+            return g;
+        }
+        GroupPacket g = new GroupPacket(msg);
+        g.setSentTime(new Date());
+        return g;
     }
 
     private void initialWork() {
@@ -545,7 +535,7 @@ public class MainActivity extends AppCompatActivity {
                                         @Override
                                         public void run() {
                                             long dt = new Date().getTime() - groupPacket.getSentTime().getTime();
-                                            read_msg_box.setText(groupPacket.getTextMessage() + dt);
+                                            read_msg_box.setText(groupPacket.getTextMessage() + groupPacket.getOriginPort() + groupPacket.getPort());
                                         }
                                     });
                                 }
@@ -560,7 +550,7 @@ public class MainActivity extends AppCompatActivity {
                                         @Override
                                         public void run() {
                                             long dt = new Date().getTime() - groupPacket.getSentTime().getTime(); //TODO remove this
-                                            read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage() + dt);
+                                            read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage() + groupPacket.getPort());
                                         }
                                     });
 
@@ -576,6 +566,7 @@ public class MainActivity extends AppCompatActivity {
                                     @Override
                                     public void run() {
                                         if (groupPacket.getTextMessage() != null && clientClass != null) {
+                                            Log.i("PING-BACK", groupPacket.getTextMessage());
 //                                                    GroupPacket g = new GroupPacket(msg);
                                             clientClass.writePing(groupPacket);
                                         } else if (groupPacket.getTextMessage() != null && serverClass != null) {
@@ -602,6 +593,7 @@ public class MainActivity extends AppCompatActivity {
                                         Log.e("record", "Unidentified type of packet");
                                 }
                                 String writeString = timeLapse + "\n";
+                                Log.i("filename", getFilesDir().toString()) ;
                                 if (fileName != null) {
                                     try {
                                         File file = new File(getFilesDir(), fileName);
@@ -739,7 +731,12 @@ public class MainActivity extends AppCompatActivity {
                                             @Override
                                             public void run() {
                                                 long dt = new Date().getTime() - groupPacket.getSentTime().getTime();
-                                                read_msg_box.setText(socket.getPort() + ": " + dt);
+                                                read_msg_box.setText(socket.getPort() + ": " + "Multithread " + groupPacket.getOriginPort());
+                                                if (groupPacket.isPing()) {
+                                                    groupPacket.setPort(socket.getPort());
+                                                    Log.i("PING-BACK", String.valueOf(groupPacket.getPort()) + " " + socket.getPort());
+//                                                    forwardToPeer(groupPacket);
+                                                }
                                             }
                                         });
                                         Log.i("PING", "Pinging message " + groupPacket.getTextMessage());

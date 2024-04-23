@@ -54,6 +54,13 @@ public class GroupPacket implements Serializable {
         this.textMessage = textMessage;
         this.sentTime = sentTime;
     }
+    public GroupPacket( int groupPort, int originPort, Date sentTime) {
+        this.type = 4;
+        this.port = groupPort;
+        this.originPort = originPort;
+        this.textMessage = "PING";
+        this.sentTime = sentTime;
+    }
 
     public Date getSentTime() {
         return sentTime;
@@ -69,6 +76,10 @@ public class GroupPacket implements Serializable {
 
     public int getPort() {
         return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
     }
 
     public int[] getGroupDevicePortArray() {
