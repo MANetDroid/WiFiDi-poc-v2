@@ -593,11 +593,18 @@ public class MainActivity extends AppCompatActivity {
                                         Log.e("record", "Unidentified type of packet");
                                 }
                                 String writeString = timeLapse + "\n";
-                                Log.i("filename", getFilesDir().toString()) ;
+
                                 if (fileName != null) {
                                     try {
-                                        File file = new File(getFilesDir(), fileName);
-                                        FileOutputStream fos = new FileOutputStream(file, true);
+//                                        File file = new File(getFilesDir(), fileName);
+                                        File documentsDir = null;
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                                            documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+                                        }else{
+                                            documentsDir = new File(getFilesDir(), fileName);
+                                        }
+                                        Log.i("filename", documentsDir.toString()) ;
+                                        FileOutputStream fos = new FileOutputStream(documentsDir, true);
                                         OutputStreamWriter osw = new OutputStreamWriter(fos);
                                         osw.write(writeString);
                                         Log.i("Result", writeString);
