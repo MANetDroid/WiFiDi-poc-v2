@@ -559,7 +559,7 @@ public class MainActivity extends AppCompatActivity {
                                     handler.post(new Runnable() {
                                         @Override
                                         public void run() {
-                                            long dt = new Date().getTime() - groupPacket.getSentTime().getTime();
+                                            long dt = new Date().getTime() - groupPacket.getSentTime().getTime(); //TODO remove this
                                             read_msg_box.setText(groupPacket.getOriginPort() + ": " + groupPacket.getTextMessage() + dt);
                                         }
                                     });
